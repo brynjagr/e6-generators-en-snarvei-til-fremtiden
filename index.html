@@ -205,16 +205,14 @@
 
                 <!-- Slide 8.2 -->
                 <section>
-
-
                     <h3>I parallell</h3>
-                    <pre class="javascript highlight" data-trim contenteditable style="font-size: 19px;">
+                    <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
 
  Promise.coroutine(function* loadData() {
      var tweets = getTweetsAsync();
      var profile = getProfileAsync();
  
-     var result = {tweets: yield tweets, profile: yield getProfileAsync};
+     var result = {tweets: yield tweets, profile: yield profile};
  })();
                     </pre>
                 </section>
