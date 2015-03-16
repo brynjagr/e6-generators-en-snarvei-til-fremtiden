@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <title>ES6 generators – en snarvei til fremtiden</title>
+
+    <meta name="author" content="Brynjar Rongved">
+
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/black.css" id="theme">
+
+    <!-- Code syntax highlighting -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+    document.getElementsByTagName('head')[0].appendChild(link);
+    </script>
+
+    <!--[if lt IE 9]>
+        <script src="lib/js/html5shiv.js"></script>
+        <![endif]-->
+</head>
+
+<body>
+
+    <div class="reveal">
+
+        <!-- Any section element inside of this container is displayed as a slide -->
+        <div class="slides">
+            <!-- Slide 1 -->
+            <section>
+                <h1>ES6 generators</h1>
+                <h3>En snarvei til fremtiden</h3>
+            </section>
+
+            <!-- Slide 2 -->
+            <section>
+                <section>
+                    <h3>Async JavaScript i et nøtteskall</h3>
+                    <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ function foo() {
+     getTweets(function(err, tweets) {
+         if (err) onError(err);
+         
+         getUserProfile(function(err, userProfile) {
+             if (err) onError(err);
+ 
+             readJsonFile(function(err, jsonData) {
+                 if (err) onError(err);
+                 try {
+                     parsedData = JSON.parse(data);
+                 } catch(e) {
+                     onError(e);
+                 }
+                 //handle results
+             });
+         });
+     });
+ }
+                    </pre>
+                </section>
+
+                <section>
+                    <h3>Synkron kode er enklere</h3>
+                    <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ function foo() {
+     try {
+         var tweets = getTweetsSync();
+         var userProfile = getUserProfileSync();
+         var jsonData = readJsonFileSync();
+     } catch (e) {
+         onError(e);
+     }
+ }
+                    </pre>
+                    <p class=>Men blokkerer :(</p>
+                </section>
+            </section>
+            <!-- Slide 3 -->
+            <section>
+                <h3>Fremtiden</h3>
+                <div class="fragment">
+                    <!--  <ul>
+                        <li> Async/await – avvente asynkrone operasjoner:</li>
+                    </ul>-->
+                    <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ async function foo() {
+     try {
+         var tweets = await getTweets();
+         var userProfile = await getUserProfile();
+         var jsonData = await readJsonFile();
+     } catch (e) {
+         onError(e);
+     }
+ }
+                    </pre>
+                </div>
+            </section>
+            <!-- Slide 4 -->
+            <section>
+                <h3>Generators korter ned ventetiden</h3>
+            </section>
+
+            <section>
+                <!-- Slide 5.1 -->
+                <h3>Generators</h3>
+                <pre>
+                    <code class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ function* numberGenerator() {
+     var one = yield 1;
+     var two = yield 2;
+     console.log(one, two) //undefined, 'hei'
+ }
+ gen = numberGenerator();
+ console.log(gen.next()); // {value: 1, done: false}
+ console.log(gen.next()); // {value: 2, done: false}
+ console.log(gen.next('hei')); // {value: undefined, done: true}
+
+
+        </code>
+                    </pre>
+                <!-- Slide 5.2 -->
+
+            </section>
+            <!-- Slide 6 -->
+            <section>
+                <h3>Så hvordan hjelper disse oss å skrive asynkron kode?</h3>
+                <ol>
+                    <div class="fragment">
+                        <li>La generatoren yielde <a class="highlight-red" style="color:red;">Promises</a> (asynkrone "verdier")</li>
+                        <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ var getTweetsAsync = Promise.promisify(getTweets);
+
+ var tweetPromise = getTweetsAsync();
+ tweetPromise.then(function(tweets) {
+     console.log(tweets);
+ });
+                    </pre>
+                    </div>
+                    <li class="fragment">Kjør generatoren på en smart måte</li>
+
+                </ol>
+            </section>
+            <!-- Slide 7 -->
+            <section>
+                <h3>Smart kode som kjører generatoren</h3>
+                <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ function pseudoSmartCode(generator) {
+    var gen = generator();
+
+    var yieldedVal = gen.next();
+
+    if (yieldedVal.then) {
+        //yieldedVal is a promise!!
+        yieldedVal.then(gen.next);
+    }
+ }
+                    </pre>
+
+                <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ function* myGen() {
+     var tweets = yield getTweetsAsync();
+     console.log(tweets);
+ }
+
+ pseudoSmartCode(myGen); // Runs the generator
+                    </pre>
+            </section>
+
+            <!-- Slide 8 -->
+            <section>
+                <!-- Slide 8.1 -->
+                <section>
+                    <h3>Sekvensielt</h3>
+
+                    <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ var Promise = require('bluebird');
+
+ Promise.coroutine(function* findRelatedQuestions() {
+    var question = yield findQuestion(questionId);
+    var relatedQuestions = yield getRelatedQuestions(question);
+ })();
+                     </pre>
+                </section>
+
+                <!-- Slide 8.2 -->
+                <section>
+
+
+                    <h3>I parallell</h3>
+                    <pre class="javascript highlight" data-trim contenteditable style="font-size: 19px;">
+
+ Promise.coroutine(function* loadData() {
+     var tweets = getTweetsAsync();
+     var profile = getProfileAsync();
+ 
+     var result = {tweets: yield tweets, profile: yield getProfileAsync};
+ })();
+                    </pre>
+                </section>
+
+                <!-- Slide 8.3 -->
+                <section>
+                    <h3>ForEach</h3>
+                    <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ Promise.coroutine(function* uploadFiles(files) {
+    files.forEach(function(file){
+        yield upload(file);
+    });
+ })();
+                    </pre>
+                    <div class="fragment">
+                        <p>eller (parallelt)</p>
+                        <pre class="javascript highlight" data-trim contenteditable style="font-size: 22px;">
+
+ Promise.coroutine(function* uploadFilesParallel(files) {
+     operations = [];
+     files.forEeach(function(file) {
+        operations.push(upload(file));
+     });
+
+     yield operations; // possible by defining a "yield handler"
+ })();
+                    </pre>
+                    </div>
+                </section>
+            </section>
+
+            <section>
+                <h3>Ta i bruk</h3>
+                <ul>
+                    <li>Generatorer:</li>
+                    <ul>
+                        <li>Node.js 0.12 (--harmony-generators)</li>
+                        <li>io.js</li>
+                        <li>Traceur (i nettleseren)</li>
+                    </ul>
+                    <li>Promises:</li>
+                    <ul>
+                        <li>Bluebird</li>
+                        <li>Q</li>
+                    </ul>
+                </ul>
+
+                <h4>Slides<h4>
+
+            </section>
+
+
+        </div>
+
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+    // Full list of configuration options available at:
+    // https://github.com/hakimel/reveal.js#configuration
+    Reveal.initialize({
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+
+        transition: 'slide', // none/fade/slide/convex/concave/zoom
+
+        // Optional reveal.js plugins
+        dependencies: [{
+            src: 'lib/js/classList.js',
+            condition: function() {
+                return !document.body.classList;
+            }
+        }, {
+            src: 'plugin/markdown/marked.js',
+            condition: function() {
+                return !!document.querySelector('[data-markdown]');
+            }
+        }, {
+            src: 'plugin/markdown/markdown.js',
+            condition: function() {
+                return !!document.querySelector('[data-markdown]');
+            }
+        }, {
+            src: 'plugin/highlight/highlight.js',
+            async: true,
+            condition: function() {
+                return !!document.querySelector('pre code');
+            },
+            callback: function() {
+                [].forEach.call(document.querySelectorAll('.highlight'), function(v, i) {
+                    hljs.highlightBlock(v);
+                });
+            }
+        }, {
+            src: 'plugin/zoom-js/zoom.js',
+            async: true
+        }, {
+            src: 'plugin/notes/notes.js',
+            async: true
+        }]
+    });
+    </script>
+
+</body>
+
+</html>
